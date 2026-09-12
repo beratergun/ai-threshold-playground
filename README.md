@@ -1,83 +1,60 @@
 # AI Threshold Playground
 
-AI Threshold Playground is a local evaluation tool for understanding how a recorded binary
-classifier score set changes as the decision threshold moves. It does not call a model,
-provider, or external API.
+AI Threshold Playground is a small local toolkit for exploring what happens when the decision threshold of a binary classifier changes.
 
-## Problem
+It starts from recorded labels and probability-like scores. There is no model inference in the project; the focus is the evaluation step after scores already exist.
 
-A single accuracy value can hide precision/recall trade-offs, and threshold selection can
-be difficult to review when the underlying calculations are opaque.
+## Why this project
 
-## Why this project exists
+A single accuracy value can hide the trade-off between false positives and false negatives. I wanted a compact implementation where changing the threshold makes that trade-off visible immediately.
 
-The project provides a small, deterministic reference implementation that makes every
-confusion-matrix count and derived metric inspectable from recorded labels and scores.
+The project is useful for experimenting with how precision, recall and F1 move even when the underlying model scores stay exactly the same.
 
-## Features
+## What it calculates
 
-- Bounded, non-empty JSON input containing integer 'label' and finite 'score' values
-- Confusion matrix, precision, recall, F1, and accuracy
-- Deterministic threshold sweep that always includes 0.0 and 1.0
-- Best-F1 selection with explicit deterministic tie-breaking
-- Self-contained responsive HTML/SVG report
-- No model inference, telemetry, or network access
+For each threshold the tool reports:
 
-## Project structure
+- True positives
+- False positives
+- True negatives
+- False negatives
+- Precision
+- Recall
+- F1
+- Accuracy
 
-- 'threshold_lab.py': parsing, validation, metrics, sweep, CLI, and HTML renderer
-- 'examples/sample.json': synthetic recorded-score fixture
-- 'tests/test_threshold_lab.py': deterministic unit and boundary tests
-- '.github/workflows/tests.yml': clean-checkout Python test job
+It can sweep thresholds across `[0, 1]`, select the best row by a deterministic F1-based rule and generate a self-contained HTML report with an SVG curve and metric table.
 
-## Setup
+## Run locally
 
-Python 3.12 is used in CI. The project has no third-party runtime dependencies.
+```bash
+python threshold_lab.py examples/sample.json
+```
 
-## Usage
+Generate an HTML report:
 
-~~~bash
-python threshold_lab.py examples/sample.json --step 0.05 --html report.html
-~~~
+```bash
+python threshold_lab.py examples/sample.json --html report.html
+```
 
-'report.html' is generated output and is intentionally ignored by Git.
+A custom sweep step can also be supplied with `--step`.
 
-## Tests
+## Input validation
 
-~~~bash
-python -m unittest discover -s tests -v
-~~~
+Labels must be integer `0` or `1`. Scores and thresholds must be finite values between `0` and `1`, and the input dataset is bounded to a defined maximum row count.
 
-Tests cover metrics, deterministic boundaries and tie-breaking, invalid probabilities and
-labels, row limits, invalid sweep steps, and the self-contained report.
-
-## Engineering decisions
-
-- The tool accepts recorded scores instead of performing inference, keeping evaluation
-  reproducible and provider-independent.
-- Input rows, labels, probabilities, and sweep steps are validated before evaluation.
-- The report embeds its CSS and SVG and does not load remote assets.
+These checks keep malformed recorded data from silently influencing the result.
 
 ## Limitations
 
-- Binary classification only
-- No ROC/AUC or calibration metrics
-- No model inference or live dataset connector
-- The visualization is intentionally lightweight
+The “best” threshold in this repository is best only according to the implemented ranking rule. Real applications may care more about recall, precision, expected cost, class imbalance or domain-specific risk.
 
-## Possible improvements
+The tool also does not train a model or claim that F1 is the correct objective for every problem.
 
-- Add ROC/AUC and calibration views.
-- Add multiclass evaluation.
-- Add CSV import with an explicit validated schema.
-- Add an optional machine-readable report export.
+## Possible next steps
 
-## Security and privacy
-
-Input remains local. The program has no network client, telemetry, model call, or storage
-service. Generated reports contain the calculated aggregate rows and should be reviewed
-before sharing when the source scores are sensitive.
+I would like to add explicit cost-sensitive thresholding, PR/ROC summaries and side-by-side comparison of several recorded score sets.
 
 ## License
 
-Licensed under the MIT License. See 'LICENSE'.
+See [LICENSE](LICENSE).
